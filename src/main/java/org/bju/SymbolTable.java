@@ -41,4 +41,16 @@ public class SymbolTable {
         }
         return Optional.empty();
     }
+
+    public Optional<Decl.MethDecl> getCurrentMethod() {
+        for(int i = symbolTable.size() - 1; i >= 0; --i) {
+            var stuff = symbolTable.get(i);
+            for(var thing : stuff) {
+                if(thing instanceof Decl.MethDecl) {
+                    return Optional.of((Decl.MethDecl) thing);
+                }
+            }
+        }
+        return Optional.empty();
+    }
 }

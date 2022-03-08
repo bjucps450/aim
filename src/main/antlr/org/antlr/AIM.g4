@@ -14,16 +14,23 @@ primary: method # meth
         | unconditional_primary # un;
 
 unconditional_primary: perchance # might
-                      | assignment # assign;
+                      | assignment # assign
+                      | yeet # ye;
 
 multi_unconditional_primary: (unconditional_primary LINE_SEP)+;
 
 assignment: value=expression ASSIGNMENT IDENTIFIER;
 
+yeet: YEET value=expression;
+
 perchance: QUESTION expression BACKTICK LINE_SEP yee=multi_unconditional_primary BACKTICK (LINE_SEP ELSE BACKTICK LINE_SEP nah=multi_unconditional_primary BACKTICK)*;
 
-method:  FED name=IDENTIFIER (SPLIT args+=IDENTIFIER)+ BACKTICK LINE_SEP multi_unconditional_primary BACKTICK BANG # with_args
+method:  FED name=IDENTIFIER (SPLIT args+=argument)+ BACKTICK LINE_SEP multi_unconditional_primary BACKTICK BANG # with_args
        | HUNGRY name=IDENTIFIER BACKTICK LINE_SEP multi_unconditional_primary BACKTICK BANG # no_args;
+
+argument: IDENTIFIER COLON type;
+
+type: INT # notstr | STR # notint;
 
 expression: PARENS expression PARENS # paren
           | NEGATIVE expression # neg
@@ -48,7 +55,11 @@ CALL: 'call';
 HUNGRY: 'hungry';
 FED: 'fed';
 ELSE: 'els';
+YEET: 'yeet';
 PLUSPLUS: 'plusplus';
+COLON: 'typeis';
+INT: 'notstr';
+STR: 'notint';
 ASSIGNMENT: '=:';
 NEGATIVE: '0>';
 LINE_SEP: '~';

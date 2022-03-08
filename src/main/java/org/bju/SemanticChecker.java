@@ -11,7 +11,8 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
     public enum Type {
         INT,
         STR,
-        ERR;
+        ERR,
+        VOI;
     }
 
     private SymbolTable symbolTable = new SymbolTable();
@@ -52,7 +53,15 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
 
     @Override
     public Object visitCall(AIMParser.CallContext ctx) {
-        return super.visitCall(ctx);
+        var methLookup = symbolTable.lookup(ctx.getText(), Decl.MethDecl.class);
+
+        if(methLookup.isPresent()) {
+            // validate correct number of args and types of args
+            return methLookup.get().getType();
+        } else if(methLookup.isEmpty()) {
+            ErrorReporter.get().reportError(ctx.start.getLine(), ctx.getText() + " is not defined", ErrorReporter.ErrorType.SEMANTIC);
+            return Type.ERR;
+        }
     }
 
     @Override
@@ -142,6 +151,18 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
     public Object visitWith_args(AIMParser.With_argsContext ctx) {
         this.symbolTable.push();
         Decl.MethDecl decl = new Decl.MethDecl();
+        decl.setLevel(symbolTable.getCurrentLevel());
+        decl.setType(Type.VOI);
+        decl.setName(ctx.name.getText());
+        symbolTable.add(decl);
+
+        ctx.args.forEach(arg -> {
+            var arg2 = (Decl.ArgDecl) visit(arg);
+            decl.getArguments().add(arg2);
+            symbolTable.add(arg2);
+        });
+
+        visit(ctx.multi_unconditional_primary());
 
         this.symbolTable.pop();
         return decl.getType();
@@ -149,6 +170,49 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
 
     @Override
     public Object visitNo_args(AIMParser.No_argsContext ctx) {
-        return super.visitNo_args(ctx);
+        this.symbolTable.push();
+        Decl.MethDecl decl = new Decl.MethDecl();
+        decl.setLevel(symbolTable.getCurrentLevel());
+        decl.setType(Type.VOI);
+        decl.setName(ctx.name.getText());
+        symbolTable.add(decl);
+
+        visit(ctx.multi_unconditional_primary());
+
+        this.symbolTable.pop();
+        return decl.getType();
+    }
+
+    @Override
+    public Object visitYeet(AIMParser.YeetContext ctx) {
+        Type type = (Type) visit(ctx.value);
+        if(this.symbolTable.getCurrentMethod().isPresent()) {
+            if(this.symbolTable.getCurrentMethod().get().getType() == Type.VOI) {
+                this.symbolTable.getCurrentMethod().get().setType(type);
+            } else if (this.symbolTable.getCurrentMethod().get().getType() != type) {
+                ErrorReporter.get().reportError(ctx.start.getLine(), "yeet expected type " + this.symbolTable.getCurrentMethod().get().getType() + " but got " + type, ErrorReporter.ErrorType.SEMANTIC);
+            }
+        } else {
+            ErrorReporter.get().reportError(ctx.start.getLine(), "yeets allowed only in methods", ErrorReporter.ErrorType.SEMANTIC);
+        }
+        return type;
+    }
+
+    @Override
+    public Object visitArgument(AIMParser.ArgumentContext ctx) {
+        if(this.symbolTable.getCurrentMethod().isPresent()) {
+            return new Decl.ArgDecl(ctx.getText(), (Type) visit(ctx.type()), symbolTable.getCurrentLevel(), this.symbolTable.getCurrentMethod().get().getArguments().size());
+        }
+        return new Decl.ArgDecl(ctx.getText(), (Type) visit(ctx.type()), symbolTable.getCurrentLevel(), -1);
+    }
+
+    @Override
+    public Object visitNotstr(AIMParser.NotstrContext ctx) {
+        return Type.INT;
+    }
+
+    @Override
+    public Object visitNotint(AIMParser.NotintContext ctx) {
+        return Type.STR;
     }
 }
