@@ -15,7 +15,8 @@ primary: method # meth
 
 unconditional_primary: perchance # might
                       | assignment # assign
-                      | yeet # ye;
+                      | yeet # ye
+                      | CALL IDENTIFIER (SPLIT args+=IDENTIFIER)+ BANG # call_meth;
 
 multi_unconditional_primary: (unconditional_primary LINE_SEP)+;
 

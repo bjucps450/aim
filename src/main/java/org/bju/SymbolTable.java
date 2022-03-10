@@ -27,7 +27,14 @@ public class SymbolTable {
     }
 
     public void pop() {
-        // do the collapse
+        List<Decl> groupToPop = symbolTable.get(symbolTable.size() - 1);
+        symbolTable.remove(groupToPop);
+        Decl.MethDecl declToCompressInto = (Decl.MethDecl) symbolTable.get(0); // class or method is always first
+        for(var entry : groupToPop) {
+            if(entry instanceof Decl.VarDecl) { // arg decls are already added so we only have to worry about the others
+                declToCompressInto.getVariables().add((Decl.VarDecl) entry);
+            }
+        }
     }
 
     public <T extends Decl> Optional<T> lookup(String name, Class<T> thingToLookup) {

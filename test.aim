@@ -1,1 +1,5 @@
-&2 plusplus 3& + 2 =: x~
+4 + 2 =: x~
+
+fed duh | x typeis notstr `~
+    4 + 2 =: x~
+` !~

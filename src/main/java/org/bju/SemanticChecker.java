@@ -16,6 +16,7 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
     }
 
     private SymbolTable symbolTable = new SymbolTable();
+    private Boolean checkingYeets = false;
 
     @Override
     protected Object aggregateResult(Object aggregate, Object nextResult) {
@@ -43,25 +44,44 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
 
     @Override
     public Object visitAssignment(AIMParser.AssignmentContext ctx) {
-        Decl.VarDecl decl = new Decl.VarDecl();
-        decl.setName(ctx.getText());
-        decl.setLevel(symbolTable.getCurrentLevel());
-        decl.setType((Type) visit(ctx.value));
-        symbolTable.add(decl);
-        return decl.getType();
+        if(!checkingYeets) {
+            Decl.VarDecl decl = new Decl.VarDecl();
+            decl.setName(ctx.getText());
+            decl.setLevel(symbolTable.getCurrentLevel());
+            decl.setType((Type) visit(ctx.value));
+            symbolTable.add(decl);
+            return decl.getType();
+        }
+        return Type.ERR;
     }
 
     @Override
     public Object visitCall(AIMParser.CallContext ctx) {
-        var methLookup = symbolTable.lookup(ctx.getText(), Decl.MethDecl.class);
+        var methLookup = symbolTable.lookup(ctx.IDENTIFIER.getText(), Decl.MethDecl.class);
 
         if(methLookup.isPresent()) {
             // validate correct number of args and types of args
             return methLookup.get().getType();
         } else if(methLookup.isEmpty()) {
             ErrorReporter.get().reportError(ctx.start.getLine(), ctx.getText() + " is not defined", ErrorReporter.ErrorType.SEMANTIC);
-            return Type.ERR;
         }
+
+        return Type.ERR;
+    }
+
+    @Override
+    public Object visitCall_meth(AIMParser.Call_methContext ctx) {
+        if(!checkingYeets) {
+            var methLookup = symbolTable.lookup(ctx.IDENTIFIER.getText(), Decl.MethDecl.class);
+
+            if (methLookup.isPresent()) {
+                // validate correct number of args and types of args
+                return methLookup.get().getType();
+            } else if (methLookup.isEmpty()) {
+                ErrorReporter.get().reportError(ctx.start.getLine(), ctx.getText() + " is not defined", ErrorReporter.ErrorType.SEMANTIC);
+            }
+        }
+        return Type.ERR;
     }
 
     @Override
@@ -149,6 +169,12 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
 
     @Override
     public Object visitWith_args(AIMParser.With_argsContext ctx) {
+        var methLookup = symbolTable.lookup(ctx.name.getText(), Decl.MethDecl.class);
+        if(methLookup.isPresent()) {
+            ErrorReporter.get().reportError(ctx.start.getLine(), ctx.name.getText() + " is already defined", ErrorReporter.ErrorType.SEMANTIC);
+            return Type.ERR;
+        }
+
         this.symbolTable.push();
         Decl.MethDecl decl = new Decl.MethDecl();
         decl.setLevel(symbolTable.getCurrentLevel());
@@ -162,6 +188,9 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
             symbolTable.add(arg2);
         });
 
+        checkingYeets = true;
+        visit(ctx.multi_unconditional_primary());
+        checkingYeets = false;
         visit(ctx.multi_unconditional_primary());
 
         this.symbolTable.pop();
@@ -170,6 +199,12 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
 
     @Override
     public Object visitNo_args(AIMParser.No_argsContext ctx) {
+        var methLookup = symbolTable.lookup(ctx.name.getText(), Decl.MethDecl.class);
+        if(methLookup.isPresent()) {
+            ErrorReporter.get().reportError(ctx.start.getLine(), ctx.name.getText() + " is already defined", ErrorReporter.ErrorType.SEMANTIC);
+            return Type.ERR;
+        }
+
         this.symbolTable.push();
         Decl.MethDecl decl = new Decl.MethDecl();
         decl.setLevel(symbolTable.getCurrentLevel());
@@ -177,6 +212,9 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
         decl.setName(ctx.name.getText());
         symbolTable.add(decl);
 
+        checkingYeets = true;
+        visit(ctx.multi_unconditional_primary());
+        checkingYeets = false;
         visit(ctx.multi_unconditional_primary());
 
         this.symbolTable.pop();
@@ -185,17 +223,20 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
 
     @Override
     public Object visitYeet(AIMParser.YeetContext ctx) {
-        Type type = (Type) visit(ctx.value);
-        if(this.symbolTable.getCurrentMethod().isPresent()) {
-            if(this.symbolTable.getCurrentMethod().get().getType() == Type.VOI) {
-                this.symbolTable.getCurrentMethod().get().setType(type);
-            } else if (this.symbolTable.getCurrentMethod().get().getType() != type) {
-                ErrorReporter.get().reportError(ctx.start.getLine(), "yeet expected type " + this.symbolTable.getCurrentMethod().get().getType() + " but got " + type, ErrorReporter.ErrorType.SEMANTIC);
+        if(checkingYeets) {
+            Type type = (Type) visit(ctx.value);
+            if (this.symbolTable.getCurrentMethod().isPresent()) {
+                if (this.symbolTable.getCurrentMethod().get().getType() == Type.VOI) {
+                    this.symbolTable.getCurrentMethod().get().setType(type);
+                } else if (this.symbolTable.getCurrentMethod().get().getType() != type) {
+                    ErrorReporter.get().reportError(ctx.start.getLine(), "yeet expected type " + this.symbolTable.getCurrentMethod().get().getType() + " but got " + type, ErrorReporter.ErrorType.SEMANTIC);
+                }
+            } else {
+                ErrorReporter.get().reportError(ctx.start.getLine(), "yeets allowed only in methods", ErrorReporter.ErrorType.SEMANTIC);
             }
-        } else {
-            ErrorReporter.get().reportError(ctx.start.getLine(), "yeets allowed only in methods", ErrorReporter.ErrorType.SEMANTIC);
+            return type;
         }
-        return type;
+        return Type.ERR;
     }
 
     @Override
@@ -214,5 +255,16 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
     @Override
     public Object visitNotint(AIMParser.NotintContext ctx) {
         return Type.STR;
+    }
+
+    @Override
+    public Object visitPerchance(AIMParser.PerchanceContext ctx) {
+        if(!checkingYeets) {
+            Type condition = (Type) visit(ctx.expression());
+            if(condition != Type.INT) {
+                ErrorReporter.get().reportError(ctx.start.getLine(), "perchance condition must be type int", ErrorReporter.ErrorType.SEMANTIC);
+            }
+        }
+        return Type.ERR;
     }
 }
