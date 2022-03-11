@@ -16,7 +16,7 @@ primary: method # meth
 unconditional_primary: perchance # might
                       | assignment # assign
                       | yeet # ye
-                      | CALL IDENTIFIER (SPLIT args+=IDENTIFIER)+ BANG # call_meth;
+                      | CALL IDENTIFIER (SPLIT args+=expression)+ BANG # call_meth;
 
 multi_unconditional_primary: (unconditional_primary LINE_SEP)+;
 
@@ -38,7 +38,7 @@ expression: PARENS expression PARENS # paren
           | first=expression op=(MULTIPLY | DIVIDE) second=expression # md
           | first=expression op=(PLUS | SUB) second=expression # ps
           | first=expression PLUSPLUS second=expression # concat
-          | CALL IDENTIFIER (SPLIT args+=IDENTIFIER)+ BANG # call
+          | CALL IDENTIFIER (SPLIT args+=expression)+ BANG # call
           | INTEGER_LITERAL # int
           | IDENTIFIER # id;
 

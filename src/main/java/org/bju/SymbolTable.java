@@ -29,12 +29,13 @@ public class SymbolTable {
     public void pop() {
         List<Decl> groupToPop = symbolTable.get(symbolTable.size() - 1);
         symbolTable.remove(groupToPop);
-        Decl.MethDecl declToCompressInto = (Decl.MethDecl) symbolTable.get(0); // class or method is always first
+        Decl.MethDecl declToCompressInto = (Decl.MethDecl) groupToPop.get(0); // class or method is always first
         for(var entry : groupToPop) {
             if(entry instanceof Decl.VarDecl) { // arg decls are already added so we only have to worry about the others
                 declToCompressInto.getVariables().add((Decl.VarDecl) entry);
             }
         }
+        add(declToCompressInto);
     }
 
     public <T extends Decl> Optional<T> lookup(String name, Class<T> thingToLookup) {
@@ -50,12 +51,10 @@ public class SymbolTable {
     }
 
     public Optional<Decl.MethDecl> getCurrentMethod() {
-        for(int i = symbolTable.size() - 1; i >= 0; --i) {
-            var stuff = symbolTable.get(i);
-            for(var thing : stuff) {
-                if(thing instanceof Decl.MethDecl) {
-                    return Optional.of((Decl.MethDecl) thing);
-                }
+        var stuff = symbolTable.get(symbolTable.size() - 1);
+        for(var thing : stuff) {
+            if(thing instanceof Decl.MethDecl) {
+                return Optional.of((Decl.MethDecl) thing);
             }
         }
         return Optional.empty();
