@@ -50,6 +50,17 @@ public class SymbolTable {
         return Optional.empty();
     }
 
+    public List<Decl.VarDecl> getGlobalVariables() {
+        List<Decl.VarDecl> decls = new ArrayList<>();
+        var stuff = symbolTable.get(0);
+        for(var thing : stuff) {
+            if(thing instanceof Decl.VarDecl) {
+                decls.add((Decl.VarDecl) thing);
+            }
+        }
+        return decls;
+    }
+
     public Optional<Decl.MethDecl> getCurrentMethod() {
         var stuff = symbolTable.get(symbolTable.size() - 1);
         for(var thing : stuff) {

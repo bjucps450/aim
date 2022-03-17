@@ -9,14 +9,17 @@ import org.apache.commons.cli.*;
 import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
 public class Main {
 
-    public static void main(String[] args) throws ParseException, IOException {
+    public static void main(String[] args) throws ParseException, IOException, URISyntaxException {
         List<String> files = parseCommandLineArgs(args);
 
         String contents = "";
@@ -34,7 +37,14 @@ public class Main {
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         AIMParser parser = new AIMParser(tokens);
         AIMParser.StartContext tree = parser.start();
-        (new SemanticChecker()).visit(tree);
+        if(ErrorReporter.get().getLexerErrors() == 0 && ErrorReporter.get().getParseErrors() == 0) {
+            var symTab = (SymbolTable) (new SemanticChecker()).visit(tree);
+            if (ErrorReporter.get().getSemanticErrors() == 0) {
+                var assembly = (new CodeGen(symTab)).visit(tree);
+                Files.writeString(Path.of("temp.s"), assembly);
+                Runtime.getRuntime().exec("gcc temp.s -o " + files.get(0).replace(".aim", ".fire"));
+            }
+        }
     }
 
     private static List<String> parseCommandLineArgs(String[] args) throws ParseException {

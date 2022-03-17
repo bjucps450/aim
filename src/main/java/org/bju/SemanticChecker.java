@@ -42,6 +42,12 @@ public class SemanticChecker extends AIMBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitStart(AIMParser.StartContext ctx) {
+        super.visitStart(ctx);
+        return symbolTable;
+    }
+
+    @Override
     public Object visitAssignment(AIMParser.AssignmentContext ctx) {
         Decl.VarDecl decl = new Decl.VarDecl();
         decl.setName(ctx.IDENTIFIER().getText());
